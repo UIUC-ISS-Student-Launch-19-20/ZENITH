@@ -14,6 +14,14 @@ class AeroDB(object):
             self.area = area
             self.cal = cal
             
+        self.eps = 0
+        self.m = 0
+        self.rho = 1.225
+        self.transverseInertiaCurve = None
+        self.polarInertiaCurve = None
+        self.transverseInertiaRateCurve = None
+        self.polarInertiaRateCurve = None
+            
         
     def clear(self):
         self.cal = 1
@@ -86,7 +94,7 @@ class AeroDB(object):
     @KDa.setter
     def KDa(self, KDa):
         if np.isscalar(KDa):
-            KDa = np.abs(KDa)
+            KDa = KDa
             self._KDa = KDa
         else:
             raise TypeError("Angle-dep. drag force coefficient KDa (AB) must be a scalar.")
@@ -98,7 +106,7 @@ class AeroDB(object):
     @CDa.setter
     def CDa(self, CDa):
         if np.isscalar(CDa):
-            CDa = np.abs(CDa)
+            CDa = CDa
             self.KDa = self.C2K(CDa)
         else:
             raise TypeError("Angle-dep. drag force coefficient CDa (AD) must be a scalar.")
@@ -110,7 +118,7 @@ class AeroDB(object):
     @KDa.setter
     def KDa2(self, KDa2):
         if np.isscalar(KDa2):
-            KDa2 = np.abs(KDa2)
+            KDa2 = KDa2
             self._KDa2 = KDa2
         else:
             raise TypeError("Square angle-dep. drag force coefficient KDa2 (AB) must be a scalar.")
@@ -122,7 +130,7 @@ class AeroDB(object):
     @CDa2.setter
     def CDa2(self, CDa2):
         if np.isscalar(CDa2):
-            CDa2 = np.abs(CDa2)
+            CDa2 = CDa2
             self.KDa2 = self.C2K(CDa2)
         else:
             raise TypeError("Square angle-dep. drag force coefficient CDa2 (AD) must be a scalar.")
@@ -158,7 +166,7 @@ class AeroDB(object):
     @KE.setter
     def KE(self, KE):
         if np.isscalar(KE):
-            KE = np.abs(KE)
+            KE = KE
             self._KE = KE
         else:
             raise TypeError("Fin cant moment coefficient KE (AB) must be a scalar.")
@@ -170,7 +178,7 @@ class AeroDB(object):
     @CE.setter
     def CE(self, CE):
         if np.isscalar(CE):
-            CE = np.abs(CE)
+            CE = CE
             self.KE = self.C2K(CE)
         else:
             raise TypeError("Fin cant moment coefficient CE (AD) must be a scalar.")
@@ -206,7 +214,7 @@ class AeroDB(object):
     @KM.setter
     def KM(self, KM):
         if np.isscalar(KM):
-            KM = np.abs(KM)
+            KM = KM
             self._KM = KM
         else:
             raise TypeError("Overturning moment coefficient KM (AB) must be a scalar.")
@@ -218,7 +226,7 @@ class AeroDB(object):
     @CM.setter
     def CM(self, CM):
         if np.isscalar(CM):
-            CM = np.abs(CM)
+            CM = CM
             self.KM = self.C2K(CM)
         else:
             raise TypeError("Overturning moment coefficient CM (AD) must be a scalar.")
@@ -382,6 +390,154 @@ class AeroDB(object):
         hDOTx = h.flatten().dot(x.flatten())
         
         return IDIVIp*hDOTx
+    
+    @property
+    def thrustCurve(self):
+        return self._T
+    
+    @thrustCurve.setter
+    def thrustCurve(self, T):
+        if T is None:
+            self._T = None
+        else:
+            try:
+                T.shape
+            except:
+                raise TypeError("Thrust curve must be a numpy array.")
+            else:
+                if T.shape[1] != 2:
+                    raise ValueError("Thrust curve must have a time and thrust force column.")
+                else:
+                    self._T = T
+                    
+    def thrustForce(self, t):
+        if self.thrustCurve is not None:
+            T = np.interp(t, self._T[:,0], self._T[:,1])
+        else:
+            T = 0
+        
+        Tvec = np.array([[T],
+                         [0],
+                         [0]])
+        
+        return Tvec
+    
+    @property
+    def transverseInertiaCurve(self):
+        return self._I
+    
+    @transverseInertiaCurve.setter
+    def transverseInertiaCurve(self, I):
+        if I is None:
+            self._I = None
+        else:
+            try:
+                I.shape
+            except:
+                raise TypeError("Transverse inertia curve must be a numpy array.")
+            else:
+                if I.shape[1] != 2:
+                    raise ValueError("Transverse inertia curve must have a time and thrust force column.")
+                else:
+                    self._I = I
+    
+    def transverseInertia(self, t):
+        if self.transverseInertiaCurve is not None:
+            I = np.interp(t, self._I[:,0], self._I[:,1])
+        else:
+            I = 0
+        
+        return I
+    
+    @property
+    def transverseInertiaRateCurve(self):
+        return self._Idot
+    
+    @transverseInertiaRateCurve.setter
+    def transverseInertiaRateCurve(self, Idot):
+        if Idot is None:
+            self._Idot = None
+        else:
+            try:
+                Idot.shape
+            except:
+                raise TypeError("Transverse inertia rate curve must be a numpy array.")
+            else:
+                if Idot.shape[1] != 2:
+                    raise ValueError("Transverse inertia rate curve must have a time and thrust force column.")
+                else:
+                    self._Idot = Idot
+    
+    def transverseInertiaRate(self, t):
+        if self.transverseInertiaRateCurve is not None:
+            Idot = np.interp(t, self._Idot[:,0], self._Idot[:,1])
+        else:
+            Idot = 0
+        
+        return Idot
+    
+    @property
+    def transverseInertiaCurve(self):
+        return self._I
+    
+    @transverseInertiaCurve.setter
+    def transverseInertiaCurve(self, I):
+        if I is None:
+            self._I = None
+        else:
+            try:
+                I.shape
+            except:
+                raise TypeError("Transverse inertia curve must be a numpy array.")
+            else:
+                if I.shape[1] != 2:
+                    raise ValueError("Transverse inertia curve must have a time and thrust force column.")
+                else:
+                    self._I = I
+    
+    def transverseInertia(self, t):
+        if self.transverseInertiaCurve is not None:
+            I = np.interp(t, self._I[:,0], self._I[:,1])
+        else:
+            I = 0
+        
+        return I
+    
+    @property
+    def polarInertiaRateCurve(self):
+        return self._Ipdot
+    
+    @polarInertiaRateCurve.setter
+    def polarInertiaRateCurve(self, Ipdot):
+        if Ipdot is None:
+            self._Ipdot = None
+        else:
+            try:
+                Ipdot.shape
+            except:
+                raise TypeError("Polar inertia rate curve must be a numpy array.")
+            else:
+                if Ipdot.shape[1] != 2:
+                    raise ValueError("Polar inertia rate curve must have a time and thrust force column.")
+                else:
+                    self._Ipdot = Ipdot
+    
+    def polarInertiaRate(self, t):
+        if self.polarInertiaRateCurve is not None:
+            Ipdot = np.interp(t, self._Ipdot[:,0], self._Ipdot[:,1])
+        else:
+            Ipdot = 0
+        
+        return Ipdot
+    
+    def densityCurve(self, rho):
+        if rho is callable:
+            self._rho = rho
+        else:
+            self._rho = lambda h : rho
+      
+    def density(self, h):
+        return self._rho(h)
             
     def dragForce(self, x, v, rho=1.225):
         V = np.linalg.norm(v)
@@ -408,12 +564,12 @@ class AeroDB(object):
     
     def overturningMoment(self, x, v, rho=1.225):
         V = np.linalg.norm(v)
-        vCRSx = np.cross(v.flatten(), x.flatten())
+        vCRSx = np.cross(v.flatten(), x.flatten()).reshape((3,1))
         
         return rho*self.cal**3 * self.KM * V * vDOTx
     
     def magnusForce(self, x, v, h, IDIVIp, rho=1.225):
-        xCRSv = np.cross(x.flatten(), v.flatten())
+        xCRSv = np.cross(x.flatten(), v.flatten()).reshape((3,1))
         Rtilde = self.Rtilde(x, h, IDIVIp)
         
         return rho*self.cal**3 * self.KF * Rtilde * xCRSv
@@ -426,7 +582,7 @@ class AeroDB(object):
     
     def pitchingForce(self, x, v, h, rho=1.225):
         V = np.linalg.norm(v)
-        hCRSx = np.cross(h.flatten(), x.flatten())
+        hCRSx = np.cross(h.flatten(), x.flatten()).reshape((3,1))
         
         return -rho*self.cal**3 * self.KS * V * hCRSx
     
@@ -445,9 +601,80 @@ class AeroDB(object):
     
     def magnuscrossMoment(self, x, v, h, IDIVIp, rho=1.225):
         V = np.linalg.norm(v)
-        hCRSx = np.cross(h.flatten(), x.flatten())
+        hCRSx = np.cross(h.flatten(), x.flatten()).reshape((3,1))
         Rtilde = self.Rtilde(x, h, IDIVIp)
         
         return -rho*self.cal**5 * self.KXT * Rtilde * hCRSx
     
-    
+    def linacc(self, t, y):
+        x = y[:3].reshape((3,1))
+        v = y[3:6].reshape((3,1))
+        o = y[6:9].reshape((3,1))
+        h = y[9:].reshape((3,1))
+        
+        m = self.m
+        rho = self.density(x[2])
+        
+        I = self.transverseInertia(t)
+        Idot = self.transverseInertiaRate(t)
+        Ip = self.polarInertia(t)
+        Ipdot = self.polarInertiaRate(t)
+        
+        IDIVIp = I/Ip
+        hCRSx = np.cross(h.flatten(), x.flatten()).reshape((3,1))
+        
+        F = self.thrustForce(t) + self.dragForce(x, v, rho=rho) + self.liftForce(x, v, rho=rho) \
+            + self.magnusForce(x, v, h, IDIVIp, rho=rho) + self.pitchingForce(x, v, h, rho=rho) \
+            + self.magnuscrossForce(x, v, h, IDIVIp, rho=rho) + (Idot/self.rt - self.mdot*self.re)*hCRSx
+        
+        vdot = F/m
+        
+        return vdot
+        
+    def angacc(self, t, y):
+        x = y[:3].reshape((3,1))
+        v = y[3:6].reshape((3,1))
+        o = y[6:9].reshape((3,1))
+        h = y[9:].reshape((3,1))
+        
+        m = self.m
+        rho = self.density(x[2])
+        eps = self.eps
+        
+        I = self.transverseInertia(t)
+        Idot = self.transverseInertiaRate(t)
+        Ip = self.polarInertia(t)
+        Ipdot = self.polarInertiaRate(t)
+        
+        IDIVIp = I/Ip
+        
+        hdot = self.spindampingMoment(x, v, h, IDIVIp, rho=rho)/Ip + self.fincantMoment(x, v, eps=eps, rho=rho)/I \
+            + self.overturningMoment(x, v, rho=rho)/I + self.magnusMoment(x, v, h, IDIVIp, rho=rho)/Ip \
+            + self.dampingMoment(x, v, h, rho=rho)/I + self.magnuscrossMoment(x, v, h, IDIVIp, rho=rho)/Ip
+        
+        hDOTx = h.flatten().dot(x.flatten())
+        
+        hdot += -((Idot - self.mdot*self.re*self.rt)/I)*(h - hDOTx*x)
+        
+        return hdot
+        
+    def odefunc(self, t, y):
+        x = y[:3].reshape((3,1))
+        v = y[3:6].reshape((3,1))
+        o = y[6:9].reshape((3,1))
+        h = y[9:].reshape((3,1))
+        
+        vdot = linacc(t, y)
+        hdot = angacc(t, y)
+        
+        T = self.thrustForce(t)
+        mdot = T/(self.Isp*9.80665)
+        
+        self.mdot = mdot
+        
+        ydot = np.vstack([v,
+                          vdot,
+                          h,
+                          hdot])
+        
+        return ydot
